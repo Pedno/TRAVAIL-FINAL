@@ -1,0 +1,81 @@
+#coding : utf-8
+
+import csv, json 
+import requests 
+from bs4 import BeautifulSoup
+
+fichier = "banq.csv"
+
+url = "https://banq.pretnumerique.ca/v1/resources.json"
+
+
+entetes = {
+     "User-Agent":"Félix Pedneault - 514/778-4207 : requête envoyée dans le cadre d'un cours de journalisme pour un reportage numérique",
+     "From":"felix.pedneault21@gmail.com"}
+
+req = requests.get(url, headers=entetes)
+
+if req.status_code == 200: 
+ print("Yé")
+else:
+ print("Échec")
+print("****************")
+#print(req.json())
+#print("****************")
+
+# à partir d'ici j'obtiens juste une première page de la collection numérique. 
+# mon objectif va donc de mettre sur pied une boucle qui va aller me chercher tous les résultats des autres pages
+# et les placer dans un .csv par catégorie ensuite
+
+
+numeropage = url + "?page="
+
+print("************************")
+livres = list(range(1,1936))
+n = 0
+
+for livre in livres: 
+    n += 1
+            
+    page = str(numeropage) 
+    toutepage = page + str(n) + ".json"
+    #print(toutepage)
+    print("."*10)   
+    megareq = requests.get(toutepage, headers=entetes)
+    #print(megareq)
+    #print(megareq.json())
+
+    infos = BeautifulSoup(megareq.text, "html.parser")
+    source = infos.find_all("details-content__title beta")
+    #print(infos) ----> n'imprime rien de conret 
+    #print(megareq.prettify()) -----> ne fonctionne pas
+
+    for info in source :
+         n += 1
+         fichelivre = []
+
+         livreURL = source.find_all("div", class_="href")
+          #print(n, livreURL)
+         sitelivre = requests.get(livreURL, headers=entetes)
+         print(sitelivre)
+
+         Titre = sitelivre.find("a", class_="display-cover-content__title")
+         Auteur = sitelivre.find("a", class_="display-cover-content__author")
+         #Éditeur = sitelivre.fin("a") ---> pas trouvé dans le code
+         Image = sitelivre.find("a", class_="cover")
+         isbn = sitelivre.find("dd", class_="isbn")
+
+         fichelivre.append(Titre)
+         fichelivre.append(Auteur)
+         fichelivre.append(Image)
+         fichelivre.append(sitelivre)
+         fichelivre.append(isbn)
+       
+# POUR FAIRE LE CSV UNE FOIS QU'ON A OBTENU TOUTES LES DONNÉES NÉCESSAIRES
+
+row_list = ["Titre", "Auteur", "Image", "Url", "ISBN"]
+     
+
+with open("banq.csv", "w", newline='') as fichier:
+ writer = csv.writer(fichelivre)
+ writer.writerows(row_list)
